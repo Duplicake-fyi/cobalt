@@ -1,9 +1,14 @@
 services:
   cobalt:
-    image: ghcr.io/duplicake-fyi/cobalt:latest
+    image: ghcr.io/imputnet/cobalt:latest
+    build:
+      context: .
+      target: combined
+      args:
+        WEB_DEFAULT_API: "http://localhost:2841/"
     init: true
     restart: unless-stopped
     ports:
-      - "2841:9000"
+      - "2841:2841"
     environment:
       API_URL: "http://localhost:2841/"

@@ -29,6 +29,10 @@ cobalt is a media downloader that doesn't piss you off. it's friendly, efficient
 
 paste the link, get the file, move on. that simple, just how it should be.
 
+This fork is a modified version to make it wayyyy easier to self host, just paste the docker compose from the code and you're done!
+This starts up both a frontend and backend instance.
+
+
 ### cobalt monorepo
 this monorepo includes source code for api, frontend, and related packages:
 - [api tree & readme](/api/)
