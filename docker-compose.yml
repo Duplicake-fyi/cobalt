@@ -1,0 +1,9 @@
+services:
+  cobalt:
+    image: ghcr.io/imputnet/cobalt:latest
+    init: true
+    restart: unless-stopped
+    ports:
+      - "2841:9000"
+    environment:
+      API_URL: "http://localhost:2841/"
