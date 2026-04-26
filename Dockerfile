@@ -42,8 +42,7 @@ WORKDIR /app
 COPY --from=build --chown=node:node /prod/api /app
 COPY --from=build --chown=node:node /app/.git /app/.git
 COPY --from=build /app/web/build /var/www/html
-COPY nginx.conf /etc/nginx/http.d/cobalt.conf
-RUN rm -f /etc/nginx/http.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
