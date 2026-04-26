@@ -1,6 +1,6 @@
 services:
   cobalt:
-    image: ghcr.io/imputnet/cobalt:latest
+    image: ghcr.io/duplicake-fyi/cobalt:latest
     init: true
     restart: unless-stopped
     ports:
