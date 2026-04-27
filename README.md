@@ -34,6 +34,8 @@ This starts up both a frontend and backend instance.
 
 For normal self-hosted deployments, the frontend now defaults to calling the same origin that served the page. If you want it to talk to a separate API host, set `WEB_DEFAULT_API` at build time.
 
+You can also optionally mount `./logo.png` to `/custom/logo.png` in `docker-compose.yml` to replace the homepage/sidebar logo automatically.
+
 
 ### cobalt monorepo
 this monorepo includes source code for api, frontend, and related packages:

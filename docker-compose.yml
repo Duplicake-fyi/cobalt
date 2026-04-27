@@ -11,3 +11,5 @@ services:
     environment:
       API_URL: "http://localhost:2841/"
       API_BASE_PATH: "/api"
+    # volumes:
+    #   - ./logo.png:/custom/logo.png:ro
