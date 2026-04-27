@@ -122,204 +122,211 @@ export const runAPI = async (express, app, __dirname, isPrimary = true) => {
         ...corsConfig,
     }));
 
-    app.post('/', (req, res, next) => {
-        if (!acceptRegex.test(req.header('Accept'))) {
-            return fail(res, "error.api.header.accept");
-        }
-        if (!acceptRegex.test(req.header('Content-Type'))) {
-            return fail(res, "error.api.header.content_type");
-        }
-        next();
-    });
+app.post('/', (req, res, next) => {
+    if (!acceptRegex.test(req.header('Accept'))) {
+        return fail(res, "error.api.header.accept");
+    }
+    if (!acceptRegex.test(req.header('Content-Type'))) {
+        return fail(res, "error.api.header.content_type");
+    }
+    next();
+});
 
-    app.post('/', (req, res, next) => {
-        if (!env.apiKeyURL) {
-            return next();
-        }
-
-        const { success, error } = APIKeys.validateAuthorization(req);
-        if (!success) {
-            // We call next() here if either if:
-            // a) we have user sessions enabled, meaning the request
-            //    will still need a Bearer token to not be rejected, or
-            // b) we do not require the user to be authenticated, and
-            //    so they can just make the request with the regular
-            //    rate limit configuration;
-            // otherwise, we reject the request.
-            if (
-                (env.sessionEnabled || !env.authRequired)
-                && ['missing', 'not_api_key'].includes(error)
-            ) {
-                return next();
-            }
-
-            return fail(res, `error.api.auth.key.${error}`);
-        }
-
-        req.authType = "key";
+app.post('/', (req, res, next) => {
+    if (!env.apiKeyURL) {
         return next();
-    });
+    }
 
-    app.post('/', (req, res, next) => {
-        if (!env.sessionEnabled || req.rateLimitKey) {
+    const { success, error } = APIKeys.validateAuthorization(req);
+    if (!success) {
+        // We call next() here if either if:
+        // a) we have user sessions enabled, meaning the request
+        // will still need a Bearer token to not be rejected, or
+        // b) we do not require the user to be authenticated, and
+        // so they can just make the request with the regular
+        // rate limit configuration;
+        // otherwise, we reject the request.
+        if (
+            (env.sessionEnabled || !env.authRequired)
+            && ['missing', 'not_api_key'].includes(error)
+        ) {
             return next();
         }
 
-        try {
-            const authorization = req.header("Authorization");
-            if (!authorization) {
-                return fail(res, "error.api.auth.jwt.missing");
-            }
+        return fail(res, `error.api.auth.key.${error}`);
+    }
 
-            if (authorization.length >= 256) {
-                return fail(res, "error.api.auth.jwt.invalid");
-            }
+    req.authType = "key";
+    return next();
+});
 
-            const [ type, token, ...rest ] = authorization.split(" ");
-            if (!token || type.toLowerCase() !== 'bearer' || rest.length) {
-                return fail(res, "error.api.auth.jwt.invalid");
-            }
+app.post('/', (req, res, next) => {
+    if (!env.sessionEnabled || req.rateLimitKey) {
+        return next();
+    }
 
-            if (!jwt.verify(token, getIP(req, 32))) {
-                return fail(res, "error.api.auth.jwt.invalid");
-            }
-
-            req.rateLimitKey = hashHmac(token, 'rate');
-            req.authType = "session";
-        } catch {
-            return fail(res, "error.api.generic");
-        }
-        next();
-    });
-
-    app.post('/', apiLimiter);
-    app.use('/', express.json({ limit: 1024 }));
-
-    app.use('/', (err, _, res, next) => {
-        if (err) {
-            const { status, body } = createResponse("error", {
-                code: "error.api.invalid_body",
-            });
-            return res.status(status).json(body);
+    try {
+        const authorization = req.header("Authorization");
+        if (!authorization) {
+            return fail(res, "error.api.auth.jwt.missing");
         }
 
-        next();
-    });
-
-    app.post("/session", sessionLimiter, async (req, res) => {
-        if (!env.sessionEnabled) {
-            return fail(res, "error.api.auth.not_configured")
+        if (authorization.length >= 256) {
+            return fail(res, "error.api.auth.jwt.invalid");
         }
 
-        const turnstileResponse = req.header("cf-turnstile-response");
-
-        if (!turnstileResponse) {
-            return fail(res, "error.api.auth.turnstile.missing");
+        const [ type, token, ...rest ] = authorization.split(" ");
+        if (!token || type.toLowerCase() !== 'bearer' || rest.length) {
+            return fail(res, "error.api.auth.jwt.invalid");
         }
 
-        const turnstileResult = await verifyTurnstileToken(
-            turnstileResponse,
-            req.ip
-        );
-
-        if (!turnstileResult) {
-            return fail(res, "error.api.auth.turnstile.invalid");
+        if (!jwt.verify(token, getIP(req, 32))) {
+            return fail(res, "error.api.auth.jwt.invalid");
         }
 
-        try {
-            res.json(jwt.generate(getIP(req, 32)));
-        } catch {
-            return fail(res, "error.api.generic");
+        req.rateLimitKey = hashHmac(token, 'rate');
+        req.authType = "session";
+    } catch {
+        return fail(res, "error.api.generic");
+    }
+    next();
+});
+
+app.post('/', apiLimiter);
+app.use('/', express.json({ limit: 1024 }));
+
+app.use('/', (err, _, res, next) => {
+    if (err) {
+        const { status, body } = createResponse("error", {
+            code: "error.api.invalid_body",
+        });
+        return res.status(status).json(body);
+    }
+
+    next();
+});
+
+const router = express.Router();
+
+router.post("/session", sessionLimiter, async (req, res) => {
+    if (!env.sessionEnabled) {
+        return fail(res, "error.api.auth.not_configured")
+    }
+
+    const turnstileResponse = req.header("cf-turnstile-response");
+    if (!turnstileResponse) {
+        return fail(res, "error.api.auth.turnstile.missing");
+    }
+
+    const turnstileResult = await verifyTurnstileToken(
+        turnstileResponse,
+        req.ip
+    );
+
+    if (!turnstileResult) {
+        return fail(res, "error.api.auth.turnstile.invalid");
+    }
+
+    try {
+        res.json(jwt.generate(getIP(req, 32)));
+    } catch {
+        return fail(res, "error.api.generic");
+    }
+});
+
+router.post('/', async (req, res) => {
+    const request = req.body;
+
+    if (!request.url) {
+        return fail(res, "error.api.link.missing");
+    }
+
+    const { success, data: normalizedRequest } = await normalizeRequest(request);
+    if (!success) {
+        return fail(res, "error.api.invalid_body");
+    }
+
+    const parsed = extract(
+        normalizedRequest.url,
+        APIKeys.getAllowedServices(req.rateLimitKey),
+    );
+
+    if (!parsed) {
+        return fail(res, "error.api.link.invalid");
+    }
+
+    if ("error" in parsed) {
+        let context;
+        if (parsed?.context) {
+            context = parsed.context;
         }
-    });
+        return fail(res, `error.api.${parsed.error}`, context);
+    }
 
-    app.post('/', async (req, res) => {
-        const request = req.body;
+    try {
+        const result = await match({
+            host: parsed.host,
+            patternMatch: parsed.patternMatch,
+            params: normalizedRequest,
+            authType: req.authType ?? "none",
+        });
 
-        if (!request.url) {
-            return fail(res, "error.api.link.missing");
-        }
+        res.status(result.status).json(result.body);
+    } catch {
+        fail(res, "error.api.generic");
+    }
+});
 
-        const { success, data: normalizedRequest } = await normalizeRequest(request);
-        if (!success) {
-            return fail(res, "error.api.invalid_body");
-        }
+router.get('/', (_, res) => {
+    res.type('json');
+    res.status(200).send(env.envFile ? getServerInfo() : serverInfo);
+});
 
-        const parsed = extract(
-            normalizedRequest.url,
-            APIKeys.getAllowedServices(req.rateLimitKey),
-        );
+router.get('/favicon.ico', (req, res) => {
+    res.status(404).end();
+});
 
-        if (!parsed) {
-            return fail(res, "error.api.link.invalid");
-        }
+app.use(env.apiBasePath, router);
 
-        if ("error" in parsed) {
-            let context;
-            if (parsed?.context) {
-                context = parsed.context;
-            }
-            return fail(res, `error.api.${parsed.error}`, context);
-        }
+app.use('/tunnel', cors({
+    methods: ['GET'],
+    exposedHeaders: [
+        'Estimated-Content-Length',
+        'Content-Disposition'
+    ],
+    ...corsConfig,
+}));
 
-        try {
-            const result = await match({
-                host: parsed.host,
-                patternMatch: parsed.patternMatch,
-                params: normalizedRequest,
-                authType: req.authType ?? "none",
-            });
+app.get('/tunnel', apiTunnelLimiter, async (req, res) => {
+    const id = String(req.query.id);
+    const exp = String(req.query.exp);
+    const sig = String(req.query.sig);
+    const sec = String(req.query.sec);
+    const iv = String(req.query.iv);
 
-            res.status(result.status).json(result.body);
-        } catch {
-            fail(res, "error.api.generic");
-        }
-    });
+    const checkQueries = id && exp && sig && sec && iv;
+    const checkBaseLength = id.length === 21 && exp.length === 13;
+    const checkSafeLength = sig.length === 43 && sec.length === 43 && iv.length === 22;
 
-    app.use('/tunnel', cors({
-        methods: ['GET'],
-        exposedHeaders: [
-            'Estimated-Content-Length',
-            'Content-Disposition'
-        ],
-        ...corsConfig,
-    }));
+    if (!checkQueries || !checkBaseLength || !checkSafeLength) {
+        return res.status(400).end();
+    }
 
-    app.get('/tunnel', apiTunnelLimiter, async (req, res) => {
-        const id = String(req.query.id);
-        const exp = String(req.query.exp);
-        const sig = String(req.query.sig);
-        const sec = String(req.query.sec);
-        const iv = String(req.query.iv);
+    if (req.query.p) {
+        return res.status(200).end();
+    }
 
-        const checkQueries = id && exp && sig && sec && iv;
-        const checkBaseLength = id.length === 21 && exp.length === 13;
-        const checkSafeLength = sig.length === 43 && sec.length === 43 && iv.length === 22;
+    const streamInfo = await verifyStream(id, sig, exp, sec, iv);
+    if (!streamInfo?.service) {
+        return res.status(streamInfo.status).end();
+    }
 
-        if (!checkQueries || !checkBaseLength || !checkSafeLength) {
-            return res.status(400).end();
-        }
+    if (streamInfo.type === 'proxy') {
+        streamInfo.range = req.headers['range'];
+    }
 
-        if (req.query.p) {
-            return res.status(200).end();
-        }
-
-        const streamInfo = await verifyStream(id, sig, exp, sec, iv);
-        if (!streamInfo?.service) {
-            return res.status(streamInfo.status).end();
-        }
-
-        if (streamInfo.type === 'proxy') {
-            streamInfo.range = req.headers['range'];
-        }
-
-        return stream(res, streamInfo);
-    });
-
-    app.get('/', (_, res) => {
-        res.type('json');
-        res.status(200).send(env.envFile ? getServerInfo() : serverInfo);
-    })
+    return stream(res, streamInfo);
+});
 
     app.get('/favicon.ico', (req, res) => {
         res.status(404).end();

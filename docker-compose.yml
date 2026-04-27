@@ -12,3 +12,4 @@ services:
       - "2841:2841"
     environment:
       API_URL: "http://localhost:2841/"
+      API_BASE_PATH: "/api"
