@@ -14,7 +14,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 RUN pnpm deploy --filter=@imput/cobalt-api --prod /prod/api
 
-ARG WEB_DEFAULT_API=http://localhost:2841/
+ARG WEB_DEFAULT_API
 ENV WEB_DEFAULT_API=$WEB_DEFAULT_API
 RUN pnpm run --prefix web check || true
 RUN pnpm run --prefix web build

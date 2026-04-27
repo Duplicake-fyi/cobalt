@@ -80,9 +80,9 @@ const generateSitemap: PluginOption = {
 const checkDefaultApiEnv = (): PluginOption => ({
     name: "check-default-api",
     config() {
-        if (!process.env.WEB_DEFAULT_API) {
-            throw new Error(
-                "WEB_DEFAULT_API env variable is required, but missing."
+        if (process.env.WEB_DEFAULT_API === undefined) {
+            console.warn(
+                "WEB_DEFAULT_API env variable is not set; frontend will use the current page origin for API requests."
             );
         }
     },
