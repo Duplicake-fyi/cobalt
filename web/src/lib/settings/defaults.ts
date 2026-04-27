@@ -1,6 +1,12 @@
 import { device } from "$lib/device";
+import env, { officialApiURL } from "$lib/env";
 import { defaultLocale } from "$lib/i18n/translations";
 import type { CobaltSettings } from "$lib/types/settings";
+
+const defaultLocalProcessing =
+    device.supports.defaultLocalProcessing && env.DEFAULT_API === officialApiURL
+        ? "preferred"
+        : "disabled";
 
 const defaultSettings: CobaltSettings = {
     schemaVersion: 6,
@@ -22,8 +28,7 @@ const defaultSettings: CobaltSettings = {
     },
     save: {
         alwaysProxy: false,
-        localProcessing:
-            device.supports.defaultLocalProcessing ? "preferred" : "disabled",
+        localProcessing: defaultLocalProcessing,
         audioBitrate: "128",
         audioFormat: "mp3",
         disableMetadata: false,

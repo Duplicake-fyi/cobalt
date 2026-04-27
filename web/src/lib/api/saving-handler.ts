@@ -1,4 +1,5 @@
 import env from "$lib/env";
+import { officialApiURL } from "$lib/env";
 import API from "$lib/api/api";
 import settings from "$lib/state/settings";
 import lazySettingGetter from "$lib/settings/lazy-get";
@@ -20,6 +21,8 @@ type SavingHandlerArgs = {
 
 export const savingHandler = async ({ url, request, oldTaskId }: SavingHandlerArgs) => {
     downloadButtonState.set("think");
+
+    const isCommunityOrSelfHosted = env.DEFAULT_API !== officialApiURL;
 
     const error = (errorText: string) => {
         return createDialog({
@@ -45,7 +48,10 @@ export const savingHandler = async ({ url, request, oldTaskId }: SavingHandlerAr
         url: url!,
 
         // not lazy cuz default depends on device capabilities
-        localProcessing: get(settings).save.localProcessing,
+        localProcessing:
+            isCommunityOrSelfHosted && get(settings).save.localProcessing === "preferred"
+                ? "disabled"
+                : get(settings).save.localProcessing,
 
         alwaysProxy: getSetting("save", "alwaysProxy"),
         downloadMode: getSetting("save", "downloadMode"),
