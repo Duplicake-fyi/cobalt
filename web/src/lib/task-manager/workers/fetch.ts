@@ -7,6 +7,25 @@ const networkErrors = [
 
 let attempts = 0;
 
+const normalizeTunnelURL = (url: string) => {
+    const tunnelURL = new URL(url, self.location.origin);
+    const currentOrigin = new URL(self.location.href).origin;
+    const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
+    const shouldRewriteOrigin = tunnelURL.pathname === "/tunnel" && (
+        tunnelURL.origin !== currentOrigin && (
+            tunnelURL.host === new URL(currentOrigin).host
+            || loopbackHosts.has(tunnelURL.hostname)
+        )
+    );
+
+    if (shouldRewriteOrigin) {
+        return `${currentOrigin}${tunnelURL.pathname}${tunnelURL.search}`;
+    }
+
+    return tunnelURL.toString();
+};
+
 const fetchFile = async (url: string) => {
     const error = async (code: string, retry: boolean = true) => {
         attempts++;
@@ -25,7 +44,7 @@ const fetchFile = async (url: string) => {
     };
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(normalizeTunnelURL(url));
 
         if (!response.ok) {
             return error("queue.fetch.bad_response");

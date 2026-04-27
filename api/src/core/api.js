@@ -58,7 +58,8 @@ const rewriteTunnelOrigin = (req, body) => {
 
     const forwardedProto = req.get("x-forwarded-proto");
     const requestProtocol = forwardedProto || req.protocol;
-    const requestHost = req.get("host");
+    const forwardedHost = req.get("x-forwarded-host");
+    const requestHost = forwardedHost || req.get("host");
 
     if (!requestProtocol || !requestHost) {
         return body;

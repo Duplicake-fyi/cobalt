@@ -7,15 +7,18 @@
     type Props = {
         emotion: MeowbaltEmotions;
         forceLoaded?: boolean;
+        useCustomImage?: boolean;
     };
 
-    const { emotion, forceLoaded }: Props = $props();
+    const { emotion, forceLoaded, useCustomImage = false }: Props = $props();
 
     let loaded = $state(false);
     let customImagePath = $state<string | null>(null);
 
     onMount(() => {
-        customImagePath = getCustomLogoPath();
+        if (useCustomImage) {
+            customImagePath = getCustomLogoPath();
+        }
     });
 </script>
 
