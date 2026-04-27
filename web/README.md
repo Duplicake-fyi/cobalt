@@ -22,6 +22,8 @@ them, you must specify them when building the frontend (or running a vite server
 \* don't use plausible.io as receiver backend unless you paid for their cloud service.
    use your own domain when hosting community edition of plausible. refer to their [docs](https://plausible.io/docs) when needed.
 
+In the combined self-hosted container, mounting an image at `/custom/logo.png` (or the same basename with `jpg`, `jpeg`, `webp`, `gif`, `svg`, or no extension) replaces the main download page illustration automatically at startup.
+
 ## link prefill
 to prefill the link into the input box & start the download automatically, you can pass the URL in the `#` parameter, like this:
 ```

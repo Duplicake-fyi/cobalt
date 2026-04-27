@@ -1,21 +1,9 @@
-<script lang="ts">
-    import { onMount } from "svelte";
+<script>
     import IconCobalt from "$components/icons/Cobalt.svelte";
-    import { getCustomLogoPath } from "$lib/runtime-config";
-
-    let customLogoPath: string | null = null;
-
-    onMount(() => {
-        customLogoPath = getCustomLogoPath();
-    });
 </script>
 
 <div id="cobalt-logo">
-    {#if customLogoPath}
-        <img src={customLogoPath} alt="custom logo" />
-    {:else}
-        <IconCobalt />
-    {/if}
+    <IconCobalt />
 </div>
 
 <style>
@@ -31,14 +19,6 @@
 
     #cobalt-logo :global(path) {
         fill: var(--sidebar-highlight);
-    }
-
-    #cobalt-logo :global(svg),
-    #cobalt-logo img {
-        width: 100%;
-        max-width: 48px;
-        max-height: 48px;
-        object-fit: contain;
     }
 
     @media screen and (max-width: 535px) {

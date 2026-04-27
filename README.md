@@ -34,7 +34,7 @@ This starts up both a frontend and backend instance.
 
 For normal self-hosted deployments, the frontend now defaults to calling the same origin that served the page. If you want it to talk to a separate API host, set `WEB_DEFAULT_API` at build time.
 
-You can also optionally uncomment the volume mount of the .png in the compose and change it to a path to a custom logo you want for your instance
+You can also optionally uncomment the volume mount of the `.png` in the compose and point it at your own image to replace the main download page image above the "community instance" label.
 
 
 ### cobalt monorepo

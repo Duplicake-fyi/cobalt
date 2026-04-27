@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { onMount } from "svelte";
     import { t } from "$lib/i18n/translations";
+    import { getCustomLogoPath } from "$lib/runtime-config";
     import type { MeowbaltEmotions } from "$lib/types/meowbalt";
 
     type Props = {
@@ -10,13 +12,18 @@
     const { emotion, forceLoaded }: Props = $props();
 
     let loaded = $state(false);
+    let customImagePath = $state<string | null>(null);
+
+    onMount(() => {
+        customImagePath = getCustomLogoPath();
+    });
 </script>
 
 <img
     class="meowbalt {emotion}"
     class:loaded={loaded || forceLoaded}
     onload={() => (loaded = true)}
-    src="/meowbalt/{emotion}.png"
+    src={customImagePath ?? `/meowbalt/${emotion}.png`}
     height="152"
     alt={$t("general.meowbalt")}
     aria-hidden="true"
@@ -29,6 +36,7 @@
         object-fit: cover;
         opacity: 0;
         transition: opacity 0.15s;
+        max-width: min(100%, 240px);
     }
 
     .meowbalt.loaded {
