@@ -34,7 +34,7 @@ This starts up both a frontend and backend instance.
 
 For normal self-hosted deployments, the frontend now defaults to calling the same origin that served the page. If you want it to talk to a separate API host, set `WEB_DEFAULT_API` at build time.
 
-You can also optionally mount `./logo.png` to `/custom/logo.png` in `docker-compose.yml` to replace the homepage/sidebar logo automatically.
+You can also optionally uncomment the volume mount of the .png in the compose and change it to a path to a custom logo you want for your instance
 
 
 ### cobalt monorepo
@@ -42,12 +42,6 @@ this monorepo includes source code for api, frontend, and related packages:
 - [api tree & readme](/api/)
 - [web tree & readme](/web/)
 - [packages tree](/packages/)
-
-it also includes documentation in the [docs tree](/docs/):
-- [how to run a cobalt instance](/docs/run-an-instance.md)
-- [how to protect a cobalt instance](/docs/protect-an-instance.md)
-- [cobalt api instance environment variables](/docs/api-env-variables.md)
-- [cobalt api documentation](/docs/api.md)
 
 ### ethics
 cobalt is a tool that makes downloading public content easier. it takes **zero liability**.
