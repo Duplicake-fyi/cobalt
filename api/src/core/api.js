@@ -44,6 +44,54 @@ const fail = (res, code, context) => {
     res.status(status).json(body);
 }
 
+const rewriteTunnelOrigin = (req, body) => {
+    if (!body || typeof body !== "object" || !env.apiURL) {
+        return body;
+    }
+
+    let configuredOrigin;
+    try {
+        configuredOrigin = new URL(env.apiURL).origin;
+    } catch {
+        return body;
+    }
+
+    const forwardedProto = req.get("x-forwarded-proto");
+    const requestProtocol = forwardedProto || req.protocol;
+    const requestHost = req.get("host");
+
+    if (!requestProtocol || !requestHost) {
+        return body;
+    }
+
+    const requestOrigin = `${requestProtocol}://${requestHost}`;
+
+    const rewriteValue = (value) => {
+        if (typeof value === "string" && value.startsWith(configuredOrigin)) {
+            try {
+                const url = new URL(value);
+                if (url.pathname === "/tunnel") {
+                    return value.replace(configuredOrigin, requestOrigin);
+                }
+            } catch {}
+        }
+
+        if (Array.isArray(value)) {
+            return value.map(rewriteValue);
+        }
+
+        if (value && typeof value === "object") {
+            for (const key of Object.keys(value)) {
+                value[key] = rewriteValue(value[key]);
+            }
+        }
+
+        return value;
+    };
+
+    return rewriteValue(body);
+};
+
 export const runAPI = async (express, app, __dirname, isPrimary = true) => {
     const startTime = new Date();
     const startTimestamp = startTime.getTime();
@@ -271,7 +319,7 @@ router.post('/', async (req, res) => {
             authType: req.authType ?? "none",
         });
 
-        res.status(result.status).json(result.body);
+        res.status(result.status).json(rewriteTunnelOrigin(req, result.body));
     } catch {
         fail(res, "error.api.generic");
     }
