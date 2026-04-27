@@ -3,23 +3,16 @@ import * as Storage from "$lib/storage";
 const networkErrors = [
     "TypeError: Failed to fetch",
     "TypeError: network error",
+    "TypeError: NetworkError when attempting to fetch resource.",
 ];
 
 let attempts = 0;
 
 const normalizeTunnelURL = (url: string) => {
-    const tunnelURL = new URL(url, self.location.origin);
-    const currentOrigin = new URL(self.location.href).origin;
-    const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+    const currentOrigin = self.location.origin || new URL(self.location.href).origin;
+    const tunnelURL = new URL(url, currentOrigin);
 
-    const shouldRewriteOrigin = tunnelURL.pathname === "/tunnel" && (
-        tunnelURL.origin !== currentOrigin && (
-            tunnelURL.host === new URL(currentOrigin).host
-            || loopbackHosts.has(tunnelURL.hostname)
-        )
-    );
-
-    if (shouldRewriteOrigin) {
+    if (tunnelURL.pathname === "/tunnel") {
         return `${currentOrigin}${tunnelURL.pathname}${tunnelURL.search}`;
     }
 
@@ -108,7 +101,7 @@ const fetchFile = async (url: string) => {
         });
     } catch (e) {
         // retry several times if the error is network-related
-        if (networkErrors.includes(String(e))) {
+        if (networkErrors.includes(String(e)) || e instanceof TypeError) {
             return error("queue.fetch.network_error");
         }
         console.error("error from the fetch worker:");
