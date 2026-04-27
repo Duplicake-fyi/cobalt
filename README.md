@@ -34,6 +34,8 @@ This starts up both a frontend and backend instance.
 
 For normal self-hosted deployments, the frontend now defaults to calling the same origin that served the page. If you want it to talk to a separate API host, set `WEB_DEFAULT_API` at build time.
 
+On self-hosted/community instances, this fork also avoids browser-side "preferred" local processing by default when sending save requests, so standard downloads go through the server tunnel path unless the user explicitly forces local processing.
+
 You can also optionally uncomment the volume mount of the `.png` in the compose and point it at your own image to replace the main download page image above the "community instance" label.
 
 

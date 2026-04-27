@@ -1,4 +1,4 @@
-import { request } from "undici";
+import { request, fetch } from "undici";
 import { Readable } from "node:stream";
 import { closeRequest, getHeaders, pipe } from "./shared.js";
 import { handleHlsPlaylist, isHlsResponse, probeInternalHLSTunnel } from "./internal-hls.js";
@@ -55,28 +55,86 @@ async function handleChunkedStream(streamInfo, res) {
     const cleanup = () => (res.end(), closeRequest(streamInfo.controller));
 
     try {
-        let req, attempts = 3;
-        while (attempts--) {
-            req = await fetch(streamInfo.url, {
-                headers: getHeaders(streamInfo.service),
-                method: 'HEAD',
+        let probeResult, attempts = 3;
+
+        const probeSize = async () => {
+            let headResponse;
+
+            try {
+                headResponse = await fetch(streamInfo.url, {
+                    headers: getHeaders(streamInfo.service),
+                    method: 'HEAD',
+                    dispatcher: streamInfo.dispatcher,
+                    signal
+                });
+
+                streamInfo.url = headResponse.url;
+
+                const contentLength = headResponse.headers.get('content-length');
+                if (headResponse.status === 200 && contentLength) {
+                    return {
+                        status: headResponse.status,
+                        size: BigInt(contentLength),
+                        contentType: headResponse.headers.get('content-type') || undefined,
+                    };
+                }
+            } catch {}
+
+            const rangeResponse = await fetch(streamInfo.url, {
+                headers: {
+                    ...getHeaders(streamInfo.service),
+                    Range: 'bytes=0-0'
+                },
+                method: 'GET',
                 dispatcher: streamInfo.dispatcher,
                 signal
             });
 
-            streamInfo.url = req.url;
-            if (req.status === 403 && streamInfo.transplant) {
+            streamInfo.url = rangeResponse.url;
+
+            try {
+                await rangeResponse.body?.cancel();
+            } catch {}
+
+            const contentRange = rangeResponse.headers.get('content-range');
+            const totalSize = contentRange?.match(/\/(\d+)$/)?.[1]
+                || rangeResponse.headers.get('content-length');
+
+            if (
+                [200, 206].includes(rangeResponse.status)
+                && totalSize
+            ) {
+                return {
+                    status: 200,
+                    size: BigInt(totalSize),
+                    contentType: rangeResponse.headers.get('content-type') || undefined,
+                };
+            }
+        };
+
+        while (attempts--) {
+            const result = await probeSize().catch(() => {});
+
+            if (result?.size) {
+                probeResult = result;
+                break;
+            }
+
+            if (streamInfo.transplant) {
                 try {
                     await streamInfo.transplant(streamInfo.dispatcher);
+                    continue;
                 } catch {
                     break;
                 }
-            } else break;
+            }
+
+            break;
         }
 
-        const size = BigInt(req.headers.get('content-length'));
+        const size = probeResult?.size;
 
-        if (req.status !== 200 || !size) {
+        if (probeResult?.status !== 200 || !size) {
             return cleanup();
         }
 
@@ -91,9 +149,8 @@ async function handleChunkedStream(streamInfo, res) {
 
         const stream = Readable.from(generator);
 
-        for (const headerName of ['content-type', 'content-length']) {
-            const headerValue = req.headers.get(headerName);
-            if (headerValue) res.setHeader(headerName, headerValue);
+        if (probeResult.contentType) {
+            res.setHeader('content-type', probeResult.contentType);
         }
 
         pipe(stream, res, cleanup);
