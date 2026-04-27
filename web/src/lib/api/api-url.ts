@@ -10,5 +10,5 @@ export const currentApiURL = () => {
         return new URL(customInstanceURL).origin + '/api';
     }
 
-    return new URL(env.DEFAULT_API!).origin + '/api';
+    return (env.DEFAULT_API ? new URL(env.DEFAULT_API).origin : window.location.origin) + '/api';
 }
